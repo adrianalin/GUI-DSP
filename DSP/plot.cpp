@@ -16,7 +16,7 @@ struct gridSettings
 Plot::Plot( QWidget *parent ): QwtPlot( parent )
 {
     // Assign a title
-    setTitle( "Filters" );
+    setTitle( "Butterworth (Chebyshev) low pass filter s-plane (w = 1)" );
 
     QwtPlotCanvas *canvas = new QwtPlotCanvas();
     canvas->setFrameStyle( QFrame::Box | QFrame::Plain );
