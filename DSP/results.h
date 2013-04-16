@@ -9,12 +9,16 @@ typedef struct complex
     double ip;
 } complex_number;
 
+/*
+ *
+ */
 typedef struct resultsChebyshev
 {
     double *a;              //a coefficients
     double *b;              //b couefficients
     complex_number *pole;   //poles of the filter
     int number_of_poles;
+    QString FilePath;
 
     resultsChebyshev()
     {

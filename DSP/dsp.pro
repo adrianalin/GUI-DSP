@@ -8,25 +8,30 @@
 ################################################################
 
 INCLUDEPATH += /usr/local/qwt-6.1.0-rc3/include \
-               /usr/include/qt4/Qt
+               /usr/include/qt4/Qt              \
+               /home/adrian/Downloads/tinyalsa/include
 
-LIBS += -L/usr/local/qwt-6.1.0-rc3/lib/ -lqwt
+LIBS += -L/usr/local/qwt-6.1.0-rc3/lib/ -lqwt \
+        -L/home/adrian/Downloads/tinyalsa -ltinyalsa
 
 TARGET       = DSP
 
 HEADERS = \
-    panel.h \
     plot.h \
     mainwindow.h \
     chebyshev.h \
     includes.h \
     settings.h \
-    results.h
+    results.h \
+    rightpannel.h \
+    leftpanel.h \
+    wavframes.h
 
 SOURCES = \
-    panel.cpp \
     plot.cpp \
     mainwindow.cpp \
     main.cpp \
-    chebyshev.cpp
+    chebyshev.cpp \
+    rightpannel.cpp \
+    leftpanel.cpp
 

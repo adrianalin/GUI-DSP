@@ -19,7 +19,7 @@ public:
     Plot( QWidget* = NULL );
 
 public Q_SLOTS:
-    void applySettings(const ChebyshevFilterResults & chebyResults);
+    void applySettings(const ChebyshevFilterResults &chebyResults);
 
 private:
     void alignScales();

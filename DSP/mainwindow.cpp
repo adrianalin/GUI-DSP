@@ -4,29 +4,37 @@
 #include <qevent.h>
 #include <qdatetime.h>
 #include <qwt_plot_canvas.h>
-#include "panel.h"
+#include "leftpanel.h"
 #include "plot.h"
 #include "mainwindow.h"
 #include "includes.h"
+#include "rightpannel.h"
 
+/*
+ **Adaug cele 2 panouri (cu taburile aferente) pe interfata grafica.
+ *
+ **Aici fac legaturile intre cele 2 clase principale:
+ *d_panel - este obiectul in care se introduce inputul - sunt preluate datele de la utilizator si sunt calculati
+ *coeficientii filtrului si polii
+ *r_panel - este obiectul in care sunt afisati polii, si coeficientii
+ */
 MainWindow::MainWindow( QWidget *parent ): QMainWindow( parent )
 {
     QWidget *w = new QWidget( this );
 
-    d_panel = new Panel( w );
+    input_pannel = new LeftPanel( w );
 
-    d_plot = new Plot( w );
+    output_pannel = new RightPannel( w );
 
-    QHBoxLayout *hLayout = new QHBoxLayout( w );
-    hLayout->addWidget( d_panel );
-    hLayout->addWidget( d_plot, 10 );
-
+    QGridLayout *MainLayout = new QGridLayout( w );
+    MainLayout->addWidget( input_pannel , 0, 0);
+    MainLayout->addWidget( output_pannel, 0, 1);
     setCentralWidget( w );
 
-    connect(d_panel, SIGNAL(settingsProcessed(ChebyshevFilterResults&)), this, SLOT(applySettings(ChebyshevFilterResults&)));
+    connect(input_pannel, SIGNAL(settingsProcessed(const ChebyshevFilterResults&)), output_pannel, SLOT(applyResults(const ChebyshevFilterResults&)));
+
+    connect(input_pannel, SIGNAL(openedWAVFile(QString)), output_pannel, SLOT(displayWavHeader(QString)));
+
+    connect(input_pannel, SIGNAL(startProcessingWAVFile()), output_pannel, SLOT(startProcessing()));
 }
 
-void MainWindow::applySettings( ChebyshevFilterResults& settings )
-{
-    d_plot->applySettings( settings );
-}

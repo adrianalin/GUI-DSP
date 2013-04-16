@@ -9,7 +9,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <QTextEdit>
+#include <QPushButton>
+#include "QTabWidget"
+#include "QWidget"
 #include "chebyshev.h"
 #include "results.h"
+#include "leftpanel.h"
+#include <qwt_knob.h>
+#include <QLabel>
+#include <QFileDialog>
 
 #endif // INCLUDES_H

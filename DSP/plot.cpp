@@ -7,6 +7,7 @@
 #include <qwt_plot_magnifier.h>
 #include "plot.h"
 #include "settings.h"
+#include "QGridLayout"
 
 struct gridSettings
 {
@@ -68,10 +69,10 @@ Plot::Plot( QWidget *parent ): QwtPlot( parent )
 
     // Axis
     setAxisTitle( QwtPlot::xBottom, "re-->" );
-    setAxisScale( QwtPlot::xBottom, -5, 5 );
+    setAxisScale( QwtPlot::xBottom, -1.2, 1.2);
 
     setAxisTitle( QwtPlot::yLeft, "jw-->" );
-    setAxisScale( QwtPlot::yLeft, -5, 5 );
+    setAxisScale( QwtPlot::yLeft, -1.2, 1.2 );
 }
 
 //
