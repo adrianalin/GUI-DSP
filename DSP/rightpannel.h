@@ -24,8 +24,6 @@ private:
     QTextEdit *TextEditFmtChunk;
     QTextEdit *TextEditDataChunk;
 
-    FILE *WAVFile;
-
     Plot *d_plot;
 
     QWidget* createPolesTab( QWidget *);

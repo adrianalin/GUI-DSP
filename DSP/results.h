@@ -1,17 +1,12 @@
 #ifndef RESULTS_H
 #define RESULTS_H
 
-#include"includes.h"
-
 typedef struct complex
 {
     double rp;
     double ip;
-} complex_number;
+}complex_number;
 
-/*
- *
- */
 typedef struct resultsChebyshev
 {
     double *a;              //a coefficients

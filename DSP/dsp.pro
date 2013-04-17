@@ -25,7 +25,8 @@ HEADERS = \
     results.h \
     rightpannel.h \
     leftpanel.h \
-    wavframes.h
+    wavframes.h \
+    processingthread.h
 
 SOURCES = \
     plot.cpp \
@@ -33,5 +34,6 @@ SOURCES = \
     main.cpp \
     chebyshev.cpp \
     rightpannel.cpp \
-    leftpanel.cpp
+    leftpanel.cpp \
+    processingthread.cpp
 
