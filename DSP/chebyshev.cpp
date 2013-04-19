@@ -127,7 +127,7 @@ void Chebyshev::ComputeCoef(double fc, int lh, double pr, int np)
         a[i] = a[i]/gain;
 
     //showCoefficients();
-    DisplayPoles();
+    //DisplayPoles();
 }
 
 void Chebyshev::showCoefficients()
@@ -160,8 +160,6 @@ complex_number* Chebyshev::getPoles()
 
 void Chebyshev::DisplayPoles()
 {
-    qDebug()<<"Original step: ";
-
     for(int i = 1; i<20; i++)
     {
         if((poles[i].rp != 0) && (poles[i].ip != 0))

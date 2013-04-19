@@ -1,6 +1,7 @@
 #ifndef PALYLISTPANNEL_H
 #define PALYLISTPANNEL_H
 #include "includes.h"
+#include <QTimer>
 
 
 class RightPannel: public QTabWidget
@@ -11,8 +12,8 @@ public:
     RightPannel(QWidget * parent = NULL );
 
 public Q_SLOTS:
-    void applyResults(const ChebyshevFilterResults &results);
-    void startProcessing();
+    void getCPULoad();
+    void displayCoefficientsAndPlot(const ChebyshevFilterResults &results);
     void displayWavHeader(const QString &filePath);
 
 private:
@@ -24,17 +25,16 @@ private:
     QTextEdit *TextEditFmtChunk;
     QTextEdit *TextEditDataChunk;
 
+    QLineEdit *LineEditCPU;
+
+    QTimer* timerUpdateCPULoad;
+
     Plot *d_plot;
 
     QWidget* createPolesTab( QWidget *);
     QWidget* createCoefficientsTab(QWidget *parent);
     QWidget* createFileDetailsTab(QWidget *parent);
-
-    void displayChebyFilterCoefficients();
-
-    void play_sample(FILE *file, unsigned int card, unsigned int device, unsigned int channels,
-                     unsigned int rate, unsigned int bits, unsigned int period_size,
-                     unsigned int period_count);
+    QWidget* createProcTab(QWidget *parent);
 };
 
 #endif // PALYLISTPANNEL_H

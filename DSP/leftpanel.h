@@ -11,6 +11,7 @@
 #include "includes.h"
 #include "plot.h"
 #include "qwt_slider.h"
+#include "processingthread.h"
 
 class QComboBox;
 class SpinBox;
@@ -25,38 +26,35 @@ public:
 
 Q_SIGNALS:
     void settingsProcessed(const ChebyshevFilterResults & );
-    void startProcessingWAVFile();
     void openedWAVFile(const QString & );
 
 private Q_SLOTS:
     void editedChebyshevParameters();
     void startProcessingChebyshevParameters();
     void OpenFileSlot();
-    void startProcessingSlot();
+    void startProcessingWAVFileSlot();
+    void stopProcessingWAVFileSlot();
 
 private:
     QWidget *createChebyshevTab( QWidget * );
     QWidget *createOpenFileTab( QWidget * );
     QWidget *createCurveTab( QWidget * );
-    ChebySettings *chebyInputSettings;
-    ChebyshevFilterResults *chebyResults;
+
+    ChebyshevFilterResults *filteringResults;
     QPushButton *ButtonOpen;
     QPushButton *ButtonStartProcessing;
+    QPushButton *ButtonStopProcessing;
     QLineEdit *LineEditFilePath;
+    ProcessingThread *worker;
 
-    struct ChebyshevFilterControls
-    {
-        QwtSlider *sliderCutoffFreq;
-        QwtSlider *sliderRipple;
-        QwtSlider *sliderNumberOfPoles;
+    QwtSlider *sliderCutoffFreq;
+    QwtSlider *sliderRipple;
+    QwtSlider *sliderNumberOfPoles;
 
-        QLineEdit *d_cutoffFreq;
-        QLineEdit *d_ripple;
-        QLineEdit *d_numberOfPoles;
-        QLabel *a_chebyshev_coefficients;
-        QLabel *b_chebyshev_coefficients;
-        QComboBox *d_filterType;
-    }chebyControls;
+    QLineEdit *LineEditCutoffFreq;
+    QLineEdit *LineEditRipple;
+    QLineEdit *LinEditNumberOfPoles;
+    QComboBox *ComboFilterType;
 };
 
 #endif

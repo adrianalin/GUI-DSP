@@ -31,10 +31,8 @@ MainWindow::MainWindow( QWidget *parent ): QMainWindow( parent )
     MainLayout->addWidget( output_pannel, 0, 1);
     setCentralWidget( w );
 
-    connect(input_pannel, SIGNAL(settingsProcessed(const ChebyshevFilterResults&)), output_pannel, SLOT(applyResults(const ChebyshevFilterResults&)));
+    connect(input_pannel, SIGNAL(settingsProcessed(const ChebyshevFilterResults&)), output_pannel, SLOT(displayCoefficientsAndPlot(ChebyshevFilterResults)));
 
     connect(input_pannel, SIGNAL(openedWAVFile(QString)), output_pannel, SLOT(displayWavHeader(QString)));
-
-    connect(input_pannel, SIGNAL(startProcessingWAVFile()), output_pannel, SLOT(startProcessing()));
 }
 

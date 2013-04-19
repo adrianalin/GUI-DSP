@@ -5,14 +5,19 @@
 #include "includes.h"
 #include "wavframes.h"
 #include <QMessageBox>
-#include "processingthread.h"
 
 RightPannel::RightPannel(QWidget* parent):QTabWidget(parent)
 {
+    timerUpdateCPULoad = new QTimer;
+
+    connect(timerUpdateCPULoad, SIGNAL(timeout()), this, SLOT(getCPULoad()));
+    timerUpdateCPULoad->start(3000);
+
     setTabPosition(QTabWidget::East);
     addTab(createPolesTab(this), "Poli");
     addTab(createCoefficientsTab(this), "Coeficienti");
     addTab( createFileDetailsTab(this), "Detalii .wav");
+    addTab(createProcTab(this), "Proc");
 
     chebyResults = new ChebyshevFilterResults;
 }
@@ -73,20 +78,31 @@ QWidget* RightPannel::createFileDetailsTab(QWidget *parent)
     return page;
 }
 
-void RightPannel::applyResults(const ChebyshevFilterResults &results)
+QWidget* RightPannel::createProcTab(QWidget *parent)
+{
+    QWidget *page = new QWidget( parent );
+    LineEditCPU = new QLineEdit;
+    LineEditCPU->setReadOnly(true);
+    QGridLayout *MainLayout = new QGridLayout;
+    QSpacerItem *spacer1 = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+    MainLayout->addWidget(new QLabel("CPU load"), 0, 0);
+    MainLayout->addWidget(LineEditCPU, 0, 1);
+    MainLayout->addItem(spacer1, 1,0);
+    page->setLayout(MainLayout);
+
+    return page;
+}
+
+void RightPannel::displayCoefficientsAndPlot(const ChebyshevFilterResults &results)
 {
     chebyResults->a = results.a;
     chebyResults->b = results.b;
     chebyResults->number_of_poles = results.number_of_poles;
     chebyResults->pole = results.pole;
 
-    displayChebyFilterCoefficients();
-
     d_plot->applySettings(results); //afisez polii in planul z
-}
 
-void RightPannel::displayChebyFilterCoefficients()
-{
     QString str;
 
     for(int i=0;i<22;i++)
@@ -120,7 +136,10 @@ void RightPannel::displayWavHeader(const QString &filePath)
 
     WAVFile = fopen(chebyResults->FilePath.toAscii(), "rb");
     if(!WAVFile)
+    {
         QMessageBox::information(this, tr("DSP"), tr("Nu se poate accesa fisierul!"));
+        return ;
+    }
 
     //+++++++++++++++++++identific RIFF chunk++++++++++++++++++++++++++++++++++++++++//
     fread(&riff_wave_header, sizeof(riff_wave_header), 1, WAVFile);
@@ -174,14 +193,64 @@ void RightPannel::displayWavHeader(const QString &filePath)
     fclose(WAVFile);
 }
 
-void RightPannel::startProcessing()
+//http://stackoverflow.com/questions/3017162/how-to-get-total-cpu-usage-in-linux-c
+void RightPannel::getCPULoad()
 {
-    QThread *thread = new QThread;
-    ProcessingThread *worker = new ProcessingThread(*chebyResults);
-    worker->moveToThread(thread);
-    connect(thread, SIGNAL(started()), worker, SLOT(startProcessing()));
-    connect(worker, SIGNAL(finished()), thread, SLOT(quit()));
-    connect(worker, SIGNAL(finished()), worker, SLOT(deleteLater()));
-    connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
-    thread->start();
+    long int val;
+    static int indicator = 0;
+    static long int totalJiffies1 = 0;  //suma tuturor valorilor (primele 7) la momentul 1
+    static long int workJiffies1 = 0;   //suma valorilor worker (primele 3- user, nice, system) la momentul 1
+    static long int totalJiffies2 = 0;  //suma tuturor valorilor (primele 7) la momentul 2
+    static long int workJiffies2 = 0;   //suma valorilor worker (primele 3)- user, nice, system) la momentul 2
+    long int workOverPeriod;
+    long int totalOverPeriod;
+
+    FILE *pFile;
+    char s[4];
+    pFile = fopen("/proc/stat","r");
+
+    if(!pFile)
+    {
+        QMessageBox::warning(this, tr("DSP"), tr("Nu se poate accesa /proc/stat !"));
+        return ;
+    }
+
+    fscanf(pFile, "%s", s);
+
+    if(indicator == 0)
+    {
+
+        for(int i=0; i<7; i++) //suma primelor 7 valori //momentul t1
+        {
+            fscanf(pFile, "%d", &val);
+            totalJiffies1 +=val;
+            if(i<3) //suma primelor 3 valori
+                workJiffies1 += val;
+        }
+        indicator = 1;
+
+    }
+    else
+    {
+        for(int i=0; i<7; i++) //suma primelor 7 valori //momentul t2
+        {
+            fscanf(pFile, "%d", &val);
+            totalJiffies2 +=val;
+            if(i<3) //suma primelor 3 valori
+                workJiffies2 += val;
+        }
+
+        workOverPeriod = workJiffies2 - workJiffies1;
+        totalOverPeriod = totalJiffies2 - totalJiffies1;
+
+        LineEditCPU->setText(QString::number((double)((workOverPeriod*100)/totalOverPeriod)));
+
+        totalJiffies1 = 0;
+        totalJiffies2 = 0;
+        workJiffies1 = 0;
+        workJiffies2 = 0;
+        indicator = 0;
+    }
+
+    fclose(pFile);
 }
