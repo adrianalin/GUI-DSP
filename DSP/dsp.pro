@@ -19,21 +19,19 @@ TARGET       = DSP
 HEADERS = \
     plot.h \
     mainwindow.h \
-    chebyshev.h \
     includes.h \
-    settings.h \
-    results.h \
     rightpannel.h \
     leftpanel.h \
     wavframes.h \
+    coefab.h \
     processingthread.h
 
 SOURCES = \
     plot.cpp \
     mainwindow.cpp \
     main.cpp \
-    chebyshev.cpp \
     rightpannel.cpp \
     leftpanel.cpp \
+    coefab.cpp \
     processingthread.cpp
 

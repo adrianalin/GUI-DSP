@@ -11,23 +11,21 @@ RightPannel::RightPannel(QWidget* parent):QTabWidget(parent)
     timerUpdateCPULoad = new QTimer;
 
     connect(timerUpdateCPULoad, SIGNAL(timeout()), this, SLOT(getCPULoad()));
-    timerUpdateCPULoad->start(3000);
+    timerUpdateCPULoad->start(800);
 
     setTabPosition(QTabWidget::East);
-    addTab(createPolesTab(this), "Poli");
+    addTab(createPolesTab(this), "Frecventa");
     addTab(createCoefficientsTab(this), "Coeficienti");
     addTab( createFileDetailsTab(this), "Detalii .wav");
     addTab(createProcTab(this), "Proc");
-
-    chebyResults = new ChebyshevFilterResults;
 }
 
 QWidget* RightPannel::createPolesTab(QWidget *parent)
 {
     QWidget *page = new QWidget( parent );
     QGridLayout *MainLayout = new QGridLayout(page);
-    d_plot = new Plot;
-    MainLayout->addWidget(d_plot, 0, 0);
+    idealPlot = new Plot;
+    MainLayout->addWidget(idealPlot, 0, 0);
 
     page->setLayout(MainLayout);
 
@@ -44,8 +42,9 @@ QWidget* RightPannel::createCoefficientsTab(QWidget *parent)
     TextEditCoeficientiA->setReadOnly(true);
     TextEditCoeficientiB->setReadOnly(true);
 
-    MainLayout->addWidget(new QLabel("Coeficienti a:"), 0, 0);
-    MainLayout->addWidget(TextEditCoeficientiA, 0, 1);
+    MainLayout->addWidget(new QLabel("Formula de calcul: y[n] = a[0]*x[n] + a1*x[n-1] + a2*x[n-2] + ... + b1*y[n-1] + b2*y[n-2] + b3*y[n-3] + ..."), 0, 1);
+    MainLayout->addWidget(new QLabel("Coeficienti a:"), 1, 0);
+    MainLayout->addWidget(TextEditCoeficientiA, 1, 1);
     MainLayout->addWidget(new QLabel("Coeficienti b:"), 2, 0);
     MainLayout->addWidget(TextEditCoeficientiB, 2, 1);
 
@@ -80,47 +79,45 @@ QWidget* RightPannel::createFileDetailsTab(QWidget *parent)
 
 QWidget* RightPannel::createProcTab(QWidget *parent)
 {
+    progressCPUUsage = new QProgressBar;
+    progressCPUUsage->setMinimum(0);
+    progressCPUUsage->setMaximum(100);
+    progressCPUUsage->setOrientation(Qt::Vertical);
+
     QWidget *page = new QWidget( parent );
-    LineEditCPU = new QLineEdit;
-    LineEditCPU->setReadOnly(true);
     QGridLayout *MainLayout = new QGridLayout;
     QSpacerItem *spacer1 = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
-    MainLayout->addWidget(new QLabel("CPU load"), 0, 0);
-    MainLayout->addWidget(LineEditCPU, 0, 1);
-    MainLayout->addItem(spacer1, 1,0);
+    MainLayout->addWidget(new QLabel("CPU"), 0, 0);
+    MainLayout->addWidget(progressCPUUsage, 1, 0);
+    MainLayout->addItem(spacer1, 2,0);
     page->setLayout(MainLayout);
 
     return page;
 }
 
-void RightPannel::displayCoefficientsAndPlot(const ChebyshevFilterResults &results)
+void RightPannel::plotIdealFilter(const double *rasp)
 {
-    chebyResults->a = results.a;
-    chebyResults->b = results.b;
-    chebyResults->number_of_poles = results.number_of_poles;
-    chebyResults->pole = results.pole;
+    idealPlot->plotIdealFilter(rasp);
+}
 
-    d_plot->applySettings(results); //afisez polii in planul z
+void RightPannel::plotRealFilter(const double *rasp)
+{
+    idealPlot->plotRealFilter(rasp);
+}
 
+void RightPannel::displayCoefficients(const double *a, const double *b, const int &np)
+{
     QString str;
-
-    for(int i=0;i<22;i++)
-    {
-        if(chebyResults->a[i]!=0)
-            str=str.append(QString("a%1=%2\n").arg(i).arg(chebyResults->a[i]));
-    }
-
+    for(int i=0; i<np; i++)
+        str = str.append(QString("a[%1] = %2\n").arg(i).arg(a[i]));
     TextEditCoeficientiA->setText(str);
     str.clear();
 
-    for(int i=0;i<22;i++)
-    {
-        if(chebyResults->b[i]!=0)
-            str=str.append(QString("b%1=%2\n").arg(i).arg(chebyResults->b[i]));
-    }
-
+    for(int i=1; i<np; i++)
+        str = str.append(QString("b[%1] = %2\n").arg(i).arg(b[i]));
     TextEditCoeficientiB->setText(str);
+    str.clear();
 }
 
 void RightPannel::displayWavHeader(const QString &filePath)
@@ -132,9 +129,7 @@ void RightPannel::displayWavHeader(const QString &filePath)
     int more_chunks = 1;
     QString str;
 
-    chebyResults->FilePath = filePath;
-
-    WAVFile = fopen(chebyResults->FilePath.toAscii(), "rb");
+    WAVFile = fopen(filePath.toAscii(), "rb");
     if(!WAVFile)
     {
         QMessageBox::information(this, tr("DSP"), tr("Nu se poate accesa fisierul!"));
@@ -243,7 +238,7 @@ void RightPannel::getCPULoad()
         workOverPeriod = workJiffies2 - workJiffies1;
         totalOverPeriod = totalJiffies2 - totalJiffies1;
 
-        LineEditCPU->setText(QString::number((double)((workOverPeriod*100)/totalOverPeriod)));
+        progressCPUUsage->setValue((int)((workOverPeriod*100)/totalOverPeriod));
 
         totalJiffies1 = 0;
         totalJiffies2 = 0;

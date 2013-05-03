@@ -4,9 +4,6 @@
 #include <qwt_plot.h>
 #include <qwt_system_clock.h>
 #include <qwt_symbol.h>
-#include <qwt_plot_marker.h>
-#include "settings.h"
-#include "chebyshev.h"
 
 class QwtPlotGrid;
 class QwtPlotCurve;
@@ -19,12 +16,14 @@ public:
     Plot( QWidget* = NULL );
 
 public Q_SLOTS:
-    void applySettings(const ChebyshevFilterResults &chebyResults);
+    void plotIdealFilter(const double* rasp);
+    void plotRealFilter(const double* rasp);
 
 private:
-    void alignScales();
+    double frequency[128];
     QwtPlotGrid *d_grid;
-    QwtPlotCurve *d_curve;
+    QwtPlotCurve *d_curve1;
+    QwtPlotCurve *d_curve2;
 };
 
 #endif

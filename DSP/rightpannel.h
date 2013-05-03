@@ -13,23 +13,23 @@ public:
 
 public Q_SLOTS:
     void getCPULoad();
-    void displayCoefficientsAndPlot(const ChebyshevFilterResults &results);
+    void plotIdealFilter(const double *rasp);
+    void plotRealFilter(const double *rasp);
     void displayWavHeader(const QString &filePath);
+    void displayCoefficients(const double *a, const double *b, const int& np);
 
 private:
-    ChebyshevFilterResults *chebyResults;
-
     QTextEdit *TextEditCoeficientiA;
     QTextEdit *TextEditCoeficientiB;
     QTextEdit *TextEditRiffChunk;
     QTextEdit *TextEditFmtChunk;
     QTextEdit *TextEditDataChunk;
 
-    QLineEdit *LineEditCPU;
+    QProgressBar* progressCPUUsage;
 
     QTimer* timerUpdateCPULoad;
 
-    Plot *d_plot;
+    Plot *idealPlot;
 
     QWidget* createPolesTab( QWidget *);
     QWidget* createCoefficientsTab(QWidget *parent);

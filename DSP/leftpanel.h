@@ -1,17 +1,15 @@
 #ifndef _PANEL_H_
 #define _PANEL_H_ 1
 
-#include "settings.h"
 #include <qtabwidget.h>
 #include <QLineEdit>
 #include <QGroupBox>
-#include "chebyshev.h"
-#include "qwt_knob.h"
 #include <QLabel>
 #include "includes.h"
 #include "plot.h"
 #include "qwt_slider.h"
 #include "processingthread.h"
+#include <QProgressBar>
 
 class QComboBox;
 class SpinBox;
@@ -25,35 +23,46 @@ public:
     LeftPanel( QWidget * = NULL );
 
 Q_SIGNALS:
-    void settingsProcessed(const ChebyshevFilterResults & );
+    void plotIdealFilter(const double *rasp);
+    void plotRealFilter(const double *rasp);
     void openedWAVFile(const QString & );
+    void showCoefficients(const double* a, const double* b, const int& np);
 
 private Q_SLOTS:
-    void editedChebyshevParameters();
-    void startProcessingChebyshevParameters();
+    void editedParameters();
+    void calculateCoefficients();
     void OpenFileSlot();
     void startProcessingWAVFileSlot();
     void stopProcessingWAVFileSlot();
+    void enableStartDisableStopButton();
 
 private:
-    QWidget *createChebyshevTab( QWidget * );
+    QWidget *createFilterTab( QWidget * );
     QWidget *createOpenFileTab( QWidget * );
     QWidget *createCurveTab( QWidget * );
 
-    ChebyshevFilterResults *filteringResults;
+    double *acoef;
+    double *bcoef;
+
+    double *idealFreq;
+
     QPushButton *ButtonOpen;
+    QPushButton *ButtonCalculateCoefficients;
     QPushButton *ButtonStartProcessing;
     QPushButton *ButtonStopProcessing;
     QLineEdit *LineEditFilePath;
+
+    QProgressBar* progressBar;
+
     ProcessingThread *worker;
 
     QwtSlider *sliderCutoffFreq;
-    QwtSlider *sliderRipple;
     QwtSlider *sliderNumberOfPoles;
+    QwtSlider *sliderStage;
 
     QLineEdit *LineEditCutoffFreq;
-    QLineEdit *LineEditRipple;
     QLineEdit *LinEditNumberOfPoles;
+    QLineEdit *LineEditStage;
     QComboBox *ComboFilterType;
 };
 

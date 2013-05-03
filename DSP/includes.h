@@ -13,8 +13,6 @@
 #include <QPushButton>
 #include "QTabWidget"
 #include "QWidget"
-#include "chebyshev.h"
-#include "results.h"
 #include "leftpanel.h"
 #include <qwt_knob.h>
 #include <QLabel>

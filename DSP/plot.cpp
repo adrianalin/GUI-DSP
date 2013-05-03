@@ -1,84 +1,92 @@
 #include <qwt_plot_canvas.h>
 #include <qwt_plot_grid.h>
 #include <qwt_plot_curve.h>
+#include <qwt_scale_engine.h>
 #include <qwt_plot_layout.h>
 #include <qwt_scale_widget.h>
 #include <qwt_plot_panner.h>
 #include <qwt_plot_magnifier.h>
+#include <qwt_legend.h>
 #include "plot.h"
-#include "settings.h"
 #include "QGridLayout"
 
-struct gridSettings
+static void logSpace( double *array, int size, double xmin, double xmax )
 {
-    QPen pen;
-} grid;
+    if ( ( xmin <= 0.0 ) || ( xmax <= 0.0 ) || ( size <= 0 ) )
+        return;
+
+    const int imax = size - 1;
+
+    array[0] = xmin;
+    array[imax] = xmax;
+
+    const double lxmin = log( xmin );
+    const double lxmax = log( xmax );
+    const double lstep = ( lxmax - lxmin ) / double( imax );
+
+    for ( int i = 1; i < imax; i++ )
+        array[i] = qExp( lxmin + double( i ) * lstep );
+}
 
 Plot::Plot( QWidget *parent ): QwtPlot( parent )
 {
-    // Assign a title
-    setTitle( "Butterworth (Chebyshev) low pass filter s-plane (w = 1)" );
+    for(int i = 0; i<128; i++)
+        frequency[i] = (double)i;
+
+    //logSpace(frequency, 128, 0.01, 128.);
+
+    setAutoReplot( false );
+
+    setTitle( "Raspunsul in frecventa" );
 
     QwtPlotCanvas *canvas = new QwtPlotCanvas();
-    canvas->setFrameStyle( QFrame::Box | QFrame::Plain );
-    canvas->setLineWidth( 1 );
-    canvas->setPalette( Qt::white );
+    canvas->setBorderRadius( 8 );
 
     setCanvas( canvas );
+    setCanvasBackground( QColor( "MidnightBlue" ) );
 
-    // panning with the left mouse button
-    ( void ) new QwtPlotPanner( canvas );
+    // legend
+    QwtLegend *legend = new QwtLegend;
+    insertLegend( legend, QwtPlot::BottomLegend );
 
-    // zoom in/out with the wheel
-    ( void ) new QwtPlotMagnifier( canvas );
+    // grid
+    QwtPlotGrid *grid = new QwtPlotGrid;
+    grid->enableXMin( true );
+    grid->setMajorPen( Qt::white, 0, Qt::DotLine );
+    grid->setMinorPen( Qt::gray, 0 , Qt::DotLine );
+    grid->attach( this );
 
-    alignScales();
+    // axes
+    setAxisTitle( QwtPlot::xBottom, "Frecventa" );
+    setAxisTitle( QwtPlot::yLeft, "Amplitudine [dB]" );
+    setAxisScale(QwtPlot::yLeft, 0, 1);
 
-    // Insert grid
-    d_grid = new QwtPlotGrid();
-    grid.pen.setStyle(Qt::DashLine);
-    d_grid->setPen(grid.pen);
-    d_grid->enableXMin(true);
-    d_grid->enableYMin(true);
-    d_grid->attach( this );
+    setAxisMaxMajor( QwtPlot::xBottom, 6 );
+    setAxisMaxMinor( QwtPlot::xBottom, 9 );
+    setAxisScale(QwtPlot::xBottom, 0, 128);
+    //setAxisScaleEngine( QwtPlot::xBottom, new QwtLogScaleEngine );
 
-    // Insert curve
-    d_curve = new QwtPlotCurve( "poles and zeroes" );
-    d_curve->setSymbol(new QwtSymbol( QwtSymbol::XCross, Qt::NoBrush, QPen( Qt::darkMagenta ), QSize( 8, 8 ) ));
-    d_curve->setStyle(QwtPlotCurve::NoCurve);
-    d_curve->attach( this );
+    // curves
+    d_curve1 = new QwtPlotCurve( "Caracteristica ideala" );
+    d_curve1->setRenderHint( QwtPlotItem::RenderAntialiased );
+    d_curve1->setPen( Qt::green );
+    d_curve1->setLegendAttribute( QwtPlotCurve::LegendShowLine );
+    d_curve1->setYAxis( QwtPlot::yLeft );
+    d_curve1->attach( this );
 
-    //  ...a horizontal line at y = 0...
-    QwtPlotMarker *mY = new QwtPlotMarker();
-    mY->setLabel( QString::fromLatin1( "y = 0" ) );
-    mY->setLabelAlignment( Qt::AlignRight | Qt::AlignTop );
-    mY->setLineStyle( QwtPlotMarker::HLine );
-    mY->setLinePen( Qt::black, 0, Qt::SolidLine );
-    mY->setYValue( 0.0 );
-    mY->attach( this );
+    d_curve2 = new QwtPlotCurve( "Caracteristica reala" );
+    d_curve2->setRenderHint( QwtPlotItem::RenderAntialiased );
+    d_curve2->setPen( Qt::cyan );
+    d_curve2->setLegendAttribute( QwtPlotCurve::LegendShowLine );
+    d_curve2->attach( this );
 
-    //  ...a vertical line at x = 0
-    QwtPlotMarker *mX = new QwtPlotMarker();
-    mX->setLabel( QString::fromLatin1( "x = 0" ) );
-    mX->setLabelAlignment( Qt::AlignLeft | Qt::AlignBottom );
-    mX->setLabelOrientation( Qt::Vertical );
-    mX->setLineStyle( QwtPlotMarker::VLine );
-    mX->setLinePen( Qt::black, 0, Qt::SolidLine );
-    mX->setXValue( 0 );
-    mX->attach( this );
-
-    // Axis
-    setAxisTitle( QwtPlot::xBottom, "re-->" );
-    setAxisScale( QwtPlot::xBottom, -1.2, 1.2);
-
-    setAxisTitle( QwtPlot::yLeft, "jw-->" );
-    setAxisScale( QwtPlot::yLeft, -1.2, 1.2 );
+    setAutoReplot( true );
 }
 
 //
 //  Set a plain canvas frame and align the scales to it
 //
-void Plot::alignScales()
+/*void Plot::alignScales()
 {
     // The code below shows how to align the scales to
     // the canvas frame, but is also a good example demonstrating
@@ -96,23 +104,18 @@ void Plot::alignScales()
     }
 
     plotLayout()->setAlignCanvasToScales( true );
+}*/
+
+void Plot::plotIdealFilter(const double* rasp )
+{
+    d_curve1->setSamples(frequency, rasp, 128);
+    d_curve1->plot();
+    replot();
 }
 
-void Plot::applySettings(const ChebyshevFilterResults &chebyResults )
+void Plot::plotRealFilter(const double *rasp)
 {
-    double x[chebyResults.number_of_poles], y[chebyResults.number_of_poles];
-    int j=0;
-    for(int i = 1; i<=chebyResults.number_of_poles/2;i++)
-    {
-        x[j] = chebyResults.pole[i].rp;
-        y[j] = chebyResults.pole[i].ip;
-        j++;
-        x[j] = chebyResults.pole[i].rp;
-        y[j] = -chebyResults.pole[i].ip;
-        j++;
-    }
-
-    d_curve->setSamples(x, y, chebyResults.number_of_poles);
-
+    d_curve2->setSamples(frequency, rasp, 128);
+    d_curve1->plot();
     replot();
 }

@@ -12,74 +12,79 @@
 #include <QThread>
 #include <QMessageBox>
 #include "qmainwindow.h"
+#include "coefab.h"
+#include <QApplication>
 
 LeftPanel::LeftPanel( QWidget *parent ): QTabWidget( parent )
 {
-    filteringResults = new ChebyshevFilterResults;
+    idealFreq = new double[128];
+    acoef = new double[14];
+    bcoef = new double[14];
 
     setTabPosition( QTabWidget::West );
 
     addTab( createOpenFileTab( this ), "Deschidere fisier" );
-    addTab( createChebyshevTab( this ), "Chebyshev" );
-    addTab( createCurveTab( this ), "Curve" );
+    addTab( createFilterTab( this ), "Filtru" );
 
-    connect( sliderCutoffFreq, SIGNAL(sliderMoved(double)), this, SLOT(editedChebyshevParameters()));
-    connect( sliderRipple, SIGNAL(sliderMoved(double)), this, SLOT(editedChebyshevParameters()));
-    connect( sliderNumberOfPoles, SIGNAL(sliderMoved(double)), this, SLOT(editedChebyshevParameters()));
+    connect(sliderCutoffFreq, SIGNAL(sliderMoved(double)), this, SLOT(editedParameters()));
+    connect(sliderNumberOfPoles, SIGNAL(sliderMoved(double)), this, SLOT(editedParameters()));
+    connect(sliderStage, SIGNAL(sliderMoved(double)), this, SLOT(editedParameters()));
+    connect(ComboFilterType, SIGNAL( currentIndexChanged( int ) ), SLOT(editedParameters()));
 
-    connect(sliderCutoffFreq,SIGNAL(sliderReleased()), this, SLOT(startProcessingChebyshevParameters()));
-    connect(sliderRipple, SIGNAL(sliderReleased()), this, SLOT(startProcessingChebyshevParameters()));
-    connect(sliderNumberOfPoles, SIGNAL(sliderReleased()), this, SLOT(startProcessingChebyshevParameters()));
+    connect(ButtonCalculateCoefficients, SIGNAL(clicked()), this, SLOT(calculateCoefficients()));
 
-    connect(ComboFilterType, SIGNAL( currentIndexChanged( int ) ), SLOT(startProcessingChebyshevParameters()));
+    connect(ButtonOpen, SIGNAL(clicked()), this, SLOT(OpenFileSlot()));
 
-    connect(ButtonOpen, SIGNAL(released()), this, SLOT(OpenFileSlot()));
+    connect(ButtonStartProcessing, SIGNAL(clicked()), this, SLOT(startProcessingWAVFileSlot()));
 
-    connect(ButtonStartProcessing, SIGNAL(released()), this, SLOT(startProcessingWAVFileSlot()));
-
-    connect(ButtonStopProcessing, SIGNAL(released()), this, SLOT(stopProcessingWAVFileSlot()));
+    connect(ButtonStopProcessing, SIGNAL(clicked()), this, SLOT(stopProcessingWAVFileSlot()));
 
     ButtonStopProcessing->setEnabled(false);
 
-    editedChebyshevParameters();
-    startProcessingChebyshevParameters();
+    editedParameters();
 }
 
 /*
- *Creez sliderele si le aplica pe tabul Chebyshev
+ *Creez sliderele si le aplic pe tabul filter
  */
-QWidget *LeftPanel::createChebyshevTab( QWidget *parent )
+QWidget *LeftPanel::createFilterTab( QWidget *parent )
 {
     QWidget *page = new QWidget( parent );
     QGridLayout *MainLayout = new QGridLayout( page );
+    QSpacerItem *spacer1 = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
     sliderCutoffFreq = new QwtSlider(Qt::Horizontal);
     sliderCutoffFreq->setGroove(true);
-    sliderCutoffFreq->setScale(0, 0.5);
-    sliderCutoffFreq->setTotalSteps(20);
-    LineEditCutoffFreq = new QLineEdit("0.25");
+    sliderCutoffFreq->setScale(0, 127);
+    sliderCutoffFreq->setTotalSteps(127);
+    LineEditCutoffFreq = new QLineEdit("1");
     LineEditCutoffFreq->setReadOnly(true);
-
-    sliderRipple = new QwtSlider(Qt::Horizontal);
-    sliderRipple->setGroove(true);
-    sliderRipple->setScale(0, 30);
-    sliderRipple->setTotalSteps(300);
-    LineEditRipple = new QLineEdit("0");
-    LineEditRipple->setReadOnly(true);
 
     sliderNumberOfPoles = new QwtSlider(Qt::Horizontal);
     sliderNumberOfPoles->setGroove(true);
-    sliderNumberOfPoles->setScale(0, 20);
-    sliderNumberOfPoles->setTotalSteps(10);
+    sliderNumberOfPoles->setScale(0, 14);
+    sliderNumberOfPoles->setTotalSteps(14);
     LinEditNumberOfPoles = new QLineEdit("2");
     LinEditNumberOfPoles->setReadOnly(true);
+
+    sliderStage = new QwtSlider(Qt::Horizontal);
+    sliderStage->setGroove(true);
+    sliderStage->setScale(0, 10);
+    sliderStage->setTotalSteps(10);
+    LineEditStage = new QLineEdit("1");
+    LineEditStage->setReadOnly(true);
 
     ComboFilterType = new QComboBox( page );
     ComboFilterType->addItem( "Trece jos" );
     ComboFilterType->addItem( "Trece sus" );
 
+    progressBar = new QProgressBar();
+    progressBar->setMinimum(0);
+    progressBar->setMaximum(99);
+
     ButtonStartProcessing = new QPushButton("Start");
     ButtonStopProcessing = new QPushButton("Stop");
+    ButtonCalculateCoefficients = new QPushButton("Calculeaza");
 
     //++++++++++++++frecv de taiere+++++++++++++++++
     QGridLayout *CutoffFreqLayout = new QGridLayout();
@@ -90,14 +95,6 @@ QWidget *LeftPanel::createChebyshevTab( QWidget *parent )
     MainLayout->addLayout(CutoffFreqLayout, 0, 0);
     MainLayout->addWidget(sliderCutoffFreq, 1, 0);
 
-    //+++++++++++++++riplul+++++++++++++++++++++++++
-    QGridLayout *RippleLayout = new QGridLayout();
-    RippleLayout->addWidget(new QLabel( "Riplu"), 0, 0);
-    RippleLayout->addWidget(LineEditRipple, 0, 1);
-
-    MainLayout->addLayout(RippleLayout,2, 0);
-    MainLayout->addWidget(sliderRipple, 3, 0);
-
     //++++++++++++++++++numarul de poli++++++++++++++
     QGridLayout *PolesLayout = new QGridLayout();
     PolesLayout->addWidget(new QLabel("Numarul de poli"), 0, 0);
@@ -106,6 +103,14 @@ QWidget *LeftPanel::createChebyshevTab( QWidget *parent )
     MainLayout->addLayout(PolesLayout, 4, 0);
     MainLayout->addWidget(sliderNumberOfPoles, 5, 0);
 
+    //+++++++++++++++++++stagiul filtrului+++++++++++
+    QGridLayout *stageLayout = new QGridLayout();
+    stageLayout->addWidget(new QLabel("Stagiu"), 0, 0);
+    stageLayout->addWidget(LineEditStage, 0, 1);
+
+    MainLayout->addLayout(stageLayout, 6, 0);
+    MainLayout->addWidget(sliderStage, 7, 0);
+
     //+++++++++++++++++tipul filtrului+++++++++++++++
     QGridLayout *FilterType = new QGridLayout();
     FilterType->addWidget(new QLabel("Tipul filtrului", 0, 0));
@@ -113,7 +118,16 @@ QWidget *LeftPanel::createChebyshevTab( QWidget *parent )
     FilterType->addWidget(ButtonStartProcessing, 0,2);
     FilterType->addWidget(ButtonStopProcessing, 0, 3);
 
-    MainLayout->addLayout(FilterType, 6, 0);
+    MainLayout->addLayout(FilterType, 8, 0);
+
+    //++++++++++++++++calculeaza coeficienti++++++++++
+    QGridLayout *calcCoef = new QGridLayout();
+    calcCoef->addWidget(ButtonCalculateCoefficients, 0, 0);
+    calcCoef->addWidget(progressBar, 0, 1);
+
+    MainLayout->addLayout(calcCoef, 9, 0);
+
+    MainLayout->addItem(spacer1, 10, 0);
 
     page->setLayout(MainLayout);
 
@@ -139,68 +153,114 @@ QWidget *LeftPanel::createOpenFileTab( QWidget *parent )
     return page;
 }
 
-QWidget *LeftPanel::createCurveTab( QWidget *parent )
-{
-    QWidget *page = new QWidget( parent );
-    return page;
-}
-
 /*
  *apelat de fiecare data cand utilizatorul muta un slider
  */
-void LeftPanel::editedChebyshevParameters()
+void LeftPanel::editedParameters()
 {
     //+++++++++++++++++++++++++++preiau setarile din interfata grafica+++++++++++++++++
     if(sliderCutoffFreq->value()>0)
-        LineEditCutoffFreq->setText(QString::number(sliderCutoffFreq->value())); //o scriu in textbox
-
-    if(sliderRipple->value()<29)
-        LineEditRipple->setText(QString::number(sliderRipple->value()));
+        LineEditCutoffFreq->setText(QString::number(sliderCutoffFreq->value())); //scriu in textbox
 
     if(sliderNumberOfPoles->value()>=2)
         LinEditNumberOfPoles->setText(QString::number(sliderNumberOfPoles->value()));
-}
 
+    if(sliderStage->value()>=1)
+        LineEditStage->setText(QString::number(sliderStage->value()));
 
-/*
- *Apelat de fiecare data cand utilizatorul elibereaza un slider
- *Aici incep procesarea setarilor date de utilizator si rezultatul il trimit la rightpannel
- */
-void LeftPanel::startProcessingChebyshevParameters()
-{
-    double *acoef;
-    double *bcoef;
-    complex_number *poli;
-
-    Chebyshev chebyFilter; //implementarea filtrului
-
-    chebyFilter.ComputeCoef((double)(LineEditCutoffFreq->text().toDouble()),
-                            (double)(ComboFilterType->currentIndex()),
-                            (double)(LineEditRipple->text().toDouble()),
-                            (double)(LinEditNumberOfPoles->text().toDouble()));
-
-    acoef = chebyFilter.getACoef();
-    bcoef = chebyFilter.getBCoef();
-    for(int i = 0; i<22; i++)
+    for(int i=0; i<128; i++)
     {
-        filteringResults->a[i] = acoef[i];
-        filteringResults->b[i] = bcoef[i];
+        switch(ComboFilterType->currentIndex())
+        {
+        case 0:
+        {
+            for(int i=0; i<128; i++)
+                if(i<LineEditCutoffFreq->text().toInt())
+                    idealFreq[i] = 0.8;
+                else
+                    idealFreq[i] = 0;
+            break;
+        }
+        case 1:
+        {
+            for(int i=0; i<128; i++)
+                if(i<LineEditCutoffFreq->text().toInt())
+                    idealFreq[i] = 0;
+                else
+                    idealFreq[i] = 0.8;
+            break;
+        }
+        default:
+        {
+
+        }
+        }
     }
 
-    poli=chebyFilter.getPoles();
-    filteringResults->pole = poli;
+    Q_EMIT plotIdealFilter(idealFreq);
+}
 
-    filteringResults->number_of_poles = (double)LinEditNumberOfPoles->text().toDouble();
+void LeftPanel::calculateCoefficients()
+{
+    ButtonCalculateCoefficients->setEnabled(false);
 
-    Q_EMIT settingsProcessed(*filteringResults);//trimit rezultatele la rightpannel pentru afisare
+    int n = 256;
+    FILE *fileCoeff=fopen("out_coef.txt", "w");
+    FILE *fileInDFT=fopen("DFT_in.txt", "w");
+    double delta = .00001;    //perturbation increment
+    double mu = .2;           //iteration step size
+    double magDFT[128];
+    double enew, eold;
+    int np = LinEditNumberOfPoles->text().toInt();  //numarul de poli = max 14
+
+    for(int i=0; i<128; i++)
+        fprintf(fileInDFT, "%f ", idealFreq[i]);
+    fclose(fileInDFT);
+
+    for(int i=0; i<np; i++)//set coefficients to initial value
+    {
+        acoef[i] = 0;
+        bcoef[i] = 0;
+    }
+    acoef[0] = 1;
+
+    for(int i=1; i<100; i++)
+    {
+        progressBar->setValue(i);
+        calcNewCoef(acoef, bcoef, idealFreq, magDFT, delta, mu, &enew, &eold, np, n);
+        qApp->processEvents();
+        Q_EMIT plotRealFilter(magDFT);
+        if(enew>eold)
+            mu = mu/2;   //adjust iteration step size
+    }
+    progressBar->setValue(0);
+
+    fprintf(fileCoeff, "a: ");
+    qDebug()<<"\n";
+    for(int i = 0; i<np; i++)
+    {
+        qDebug()<<"a["<<i<<"]="<<acoef[i];
+        fprintf(fileCoeff, "%f ", acoef[i]);
+    }
+    fprintf(fileCoeff, "\n b: ");
+    for(int i = 1; i<np; i++)
+    {
+        qDebug()<<"b["<<i<<"]="<<bcoef[i];
+        fprintf(fileCoeff, "%f ", bcoef[i]);
+    }
+    fclose(fileCoeff);
+
+    ButtonCalculateCoefficients->setEnabled(true);
+    Q_EMIT showCoefficients(acoef, bcoef, np);
 }
 
 void LeftPanel::OpenFileSlot()
 {
-    filteringResults->FilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "/home/adrian/Sounds/", tr("Files (*.wav)"));
-    LineEditFilePath->setText(filteringResults->FilePath);
-    if(!filteringResults->FilePath.isNull())
-        Q_EMIT openedWAVFile(filteringResults->FilePath);
+    QString filePath;
+    filePath = QFileDialog::getOpenFileName(this, tr("Open File"), "/home/adrian/Sounds/", tr("Files (*.wav)"));
+    LineEditFilePath->setText(filePath);
+    if(!filePath.isNull())
+        Q_EMIT openedWAVFile(filePath);
 }
 
 /*
@@ -209,14 +269,14 @@ void LeftPanel::OpenFileSlot()
  */
 void LeftPanel::startProcessingWAVFileSlot()
 {
-    worker = new ProcessingThread(*filteringResults);
-
-    QThread *thread = new QThread;
-    if(filteringResults->FilePath.isNull())
+    if(LineEditFilePath->text() == NULL)
     {
         QMessageBox::warning(this, tr("DSP"), tr("Selectati un fisier .WAV!"));
         return ;
     }
+
+    QThread *thread = new QThread;
+    worker = new ProcessingThread(acoef, bcoef, LineEditFilePath->text(), LinEditNumberOfPoles->text().toInt(), LineEditStage->text().toInt());
 
     ButtonStartProcessing->setEnabled(false);
     ButtonStopProcessing->setEnabled(true);
@@ -224,15 +284,19 @@ void LeftPanel::startProcessingWAVFileSlot()
     worker->moveToThread(thread);
     connect(thread, SIGNAL(started()), worker, SLOT(startProcessing()));
     connect(worker, SIGNAL(finished()), thread, SLOT(quit()));
+    connect(worker, SIGNAL(finished()), this, SLOT(enableStartDisableStopButton()));
     connect(worker, SIGNAL(finished()), worker, SLOT(deleteLater()));
     connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
     thread->start();
 }
 
-void LeftPanel::stopProcessingWAVFileSlot()
+void LeftPanel::enableStartDisableStopButton()
 {
     ButtonStartProcessing->setEnabled(true);
     ButtonStopProcessing->setEnabled(false);
+}
 
+void LeftPanel::stopProcessingWAVFileSlot()
+{
     worker->stopProcessingSlot();
 }
