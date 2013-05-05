@@ -176,7 +176,7 @@ void LeftPanel::editedParameters()
         {
             for(int i=0; i<128; i++)
                 if(i<LineEditCutoffFreq->text().toInt())
-                    idealFreq[i] = 0.8;
+                    idealFreq[i] = 0.9;
                 else
                     idealFreq[i] = 0;
             break;
@@ -187,7 +187,7 @@ void LeftPanel::editedParameters()
                 if(i<LineEditCutoffFreq->text().toInt())
                     idealFreq[i] = 0;
                 else
-                    idealFreq[i] = 0.8;
+                    idealFreq[i] = 0.9;
             break;
         }
         default:

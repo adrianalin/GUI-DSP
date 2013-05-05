@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <QDebug>
 
+//#define ZED
+
 double *a; //coeficientii b
 double *b; //coeficientii a
 int np; //numarul de ploi
@@ -12,15 +14,13 @@ class StageFilter
 {
     qint16 delLeftIn[22];
     qint16 delLeftOut[22];
-
     qint16 delRightIn[22];
     qint16 delRightOut[22];
-
     qint16 aSumLeft;
     qint16 bSumLeft;
-
     qint16 aSumRight;
     qint16 bSumRight;
+
 public:
     StageFilter()
     {
@@ -39,17 +39,11 @@ public:
             aSumLeft = 0;
 
             for(int j=0; j<np; j++)
-            {
                 aSumLeft += a[j]*delLeftIn[j];
-                //qDebug()<<"a["<<j<<"]="<<a[j];
-            }
 
             bSumLeft = 0;
             for(int j=1; j<np;j++)
-            {
                 bSumLeft += b[j]*delLeftOut[j];
-                //qDebug()<<"b["<<j<<"]="<<b[j];
-            }
 
             out_buffer[i] = (qint16)(aSumLeft  + bSumLeft);
 
@@ -66,17 +60,11 @@ public:
 
             aSumRight = 0;
             for(int j=0; j<np; j++)
-            {
                 aSumRight += a[j]*delRightIn[j];
-                //qDebug()<<"a["<<j<<"]="<<chebyResults->a[j];
-            }
 
             bSumRight = 0;
             for(int j=1; j<np;j++)
-            {
                 bSumRight += b[j]*delLeftOut[j];
-                //qDebug()<<"b["<<j<<"]="<<chebyResults->b[j];
-            }
 
             out_buffer[i+1] = (qint16)(aSumRight  + bSumRight);
 
@@ -106,34 +94,51 @@ ProcessingThread::ProcessingThread(double const* coefaa, double const* coefbb, c
     filePath = strr;
 }
 
+
 void ProcessingThread::startProcessing()
 {
     struct riff_wave_header riff_wave_header;
     struct chunk_header chunk_header;
     struct chunk_fmt chunk_fmt;
+#ifndef ZED
     unsigned int device = 0;
     unsigned int card = 0;
     unsigned int period_size = 1024;
     unsigned int period_count = 4;
+#endif
     int more_chunks = 1;
 
     stopProcessing = false;
-    WAVFile = fopen(filePath.toAscii(), "rb");
+    WAVFile = fopen(filePath.toAscii(), "rb"); //fisierul de intrare pe care se face procesarea de semnal
     if (!WAVFile)
     {
         //QMessageBox::warning(this, tr("DSP"), tr("Nu se poate accesa fisierul!"));
         return ;
     }
 
+#ifdef ZED //deschide /dev/xillybus_audio/ pentru a scrie fisierul .wav (driverul de sunet) - play .wav
+    FILE *file_out = fopen("out.wav", "wb");
+    if (!file_out)
+    {
+        fprintf(stderr, "Unable to open file '%s'\n");
+        return ;
+    }
+#endif
+
     fread(&riff_wave_header, sizeof(riff_wave_header), 1, WAVFile);
-    if ((riff_wave_header.riff_id != ID_RIFF) ||(riff_wave_header.wave_id != ID_WAVE))
+    if ((riff_wave_header.riff_id != ID_RIFF) || (riff_wave_header.wave_id != ID_WAVE))
     {
         //QMessageBox::warning(this, tr("DSP"), tr("Nu se poate accesa fisierul!"));
         fclose(WAVFile);
         return ;
     }
 
-    do {
+#ifdef ZED
+    fwrite(&riff_wave_header, sizeof(riff_wave_header), 1, file_out);
+#endif
+
+    do
+    {
         fread(&chunk_header, sizeof(chunk_header), 1, WAVFile);
 
         switch (chunk_header.id) {
@@ -142,32 +147,59 @@ void ProcessingThread::startProcessing()
             // If the format header is larger, skip the rest
             if (chunk_header.sz > sizeof(chunk_fmt))
                 fseek(WAVFile, chunk_header.sz - sizeof(chunk_fmt), SEEK_CUR);
+#ifdef ZED
+            fwrite(&chunk_header, sizeof(chunk_header), 1, file_out);
+            fwrite(&chunk_fmt, sizeof(chunk_fmt), 1, file_out);
+#endif
             break;
         case ID_DATA:
+        {
+#ifdef ZED
+            uint16_t a = 0;
+            fwrite(&a, sizeof(uint16_t), 1, file_out);
+            fwrite(&chunk_header, sizeof(chunk_header), 1, file_out);
+#endif
             //Stop looking for chunks
             more_chunks = 0;
             break;
+        }
         default:
             //Unknown chunk, skip bytes
             fseek(WAVFile, chunk_header.sz, SEEK_CUR);
         }
     } while (more_chunks);
 
+#ifdef ZED
+    play_sample(file_out);
+#else
     play_sample(WAVFile, card, device, chunk_fmt.num_channels, chunk_fmt.sample_rate, chunk_fmt.bits_per_sample, period_size, period_count);
+#endif
 
     fclose(WAVFile);
+
+#ifdef ZED
+    fclose(file_out);
+#endif
 
     emit finished();
 }
 
+#ifdef ZED
+void ProcessingThread::play_sample(FILE *file_out)
+#else
 void ProcessingThread::play_sample(FILE *file, unsigned int card, unsigned int device, unsigned int channels,
                                    unsigned int rate, unsigned int bits, unsigned int period_size,
                                    unsigned int period_count)
+#endif
 {
-    struct pcm_config config;
-    struct pcm *pcm;
     qint16 *in_buffer;
     qint16 *out_buffer;
+#ifdef ZED
+    int size = 16384;
+    int num_read;
+#else
+    struct pcm_config config;
+    struct pcm *pcm;
     int num_read;
     int size; //dimensiunea bufferelor
 
@@ -195,16 +227,19 @@ void ProcessingThread::play_sample(FILE *file, unsigned int card, unsigned int d
         return;
     }
 
-    size = pcm_frames_to_bytes(pcm, pcm_get_buffer_size(pcm)); //size = buffer size (in frames)
-    qDebug()<<"\npcm_buffer_size[frames]=%d\n"<<pcm_get_buffer_size(pcm);
-    qDebug()<<"buffer size [bytes]=%d\n"<<size;
+    size = pcm_frames_to_bytes(pcm, pcm_get_buffer_size(pcm)); //size = buffer size (in bytes)
+    qDebug()<<"buffer size [bytes]="<<size;
+#endif
+
     in_buffer = (qint16*)malloc(size);
     if (!in_buffer)
     {
         //QMessageBox::warning(this, tr("DSP"), tr("Nu se poate aloca memorie pentru buffer!"));
         qDebug()<<"could not load buffer!";
         free(in_buffer);
+#ifndef ZED
         pcm_close(pcm);
+#endif
         return;
     }
 
@@ -214,11 +249,11 @@ void ProcessingThread::play_sample(FILE *file, unsigned int card, unsigned int d
         //QMessageBox::warning(this, tr("DSP"), tr("Nu se poate aloca memorie pentru buffer!"));
         qDebug()<<"could not load buffer!";
         free(out_buffer);
+#ifndef ZED
         pcm_close(pcm);
+#endif
         return;
     }
-
-    qDebug()<<"Playing sample:"<<channels<<" ch,"<<rate<<" hz,"<<bits<<" bits";
 
     //****************************************************************processing loop**********************
     StageFilter stage[deg];
@@ -226,7 +261,7 @@ void ProcessingThread::play_sample(FILE *file, unsigned int card, unsigned int d
     qDebug()<<"deg="<<deg;
     do
     {
-        num_read = fread(in_buffer, sizeof(qint16), size/2, file);
+        num_read = fread(in_buffer, sizeof(qint16), size/2, WAVFile);
 
         stage[0].startFilter(in_buffer, out_buffer, num_read);
         for(int i = 1; i<deg; i++)//aplic filtrarea in cascada
@@ -234,18 +269,28 @@ void ProcessingThread::play_sample(FILE *file, unsigned int card, unsigned int d
 
         if (num_read > 0)
         {
+#ifdef ZED
+            if (fwrite(out_buffer, sizeof(qint16), num_read, file_out) != num_read)
+            {
+                fprintf(stderr, "Error writing to outfile!\n");
+                break;
+            }
+#else
             if (pcm_write(pcm, out_buffer, num_read*2))
             {
                 fprintf(stderr, "Error playing sample\n");
                 break;
             }
+#endif
         }
     } while ((num_read > 0) && (stopProcessing == false));
     //*******************************************************************************************
 
     free(in_buffer);
     free(out_buffer);
+#ifndef ZED
     pcm_close(pcm);
+#endif
     qDebug()<<"End playing !";
 }
 

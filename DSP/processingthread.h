@@ -5,6 +5,8 @@
 #include <QBool>
 #include "wavframes.h"
 
+//#define ZED
+
 class ProcessingThread : public QObject
 {
     Q_OBJECT
@@ -24,9 +26,13 @@ private:
     QString filePath;
     FILE *WAVFile;
 
+#ifdef ZED
+    void play_sample(FILE *file_out);
+#else
     void play_sample(FILE *file, unsigned int card, unsigned int device, unsigned int channels,
                                   unsigned int rate, unsigned int bits, unsigned int period_size,
                                   unsigned int period_count);
+#endif
 };
 
 #endif // PROCESSINGTHREAD_H

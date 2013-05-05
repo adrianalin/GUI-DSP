@@ -1,4 +1,5 @@
 #include "coefab.h"
+#include<QDebug>
 
 void calculateDFT(double *rex, double *imx, int n)
 {
@@ -102,6 +103,7 @@ double freqDomainError(double *a, double *b, double *t, double *magDFT, int np, 
     double imx[255];   //imaginary part of signal during FFT
 
     double er;
+    double mag;
     for(int i=0; i<n-1; i++)  //load shifted impulse into imx[]
     {
         rex[i] = 0;
@@ -116,7 +118,7 @@ double freqDomainError(double *a, double *b, double *t, double *magDFT, int np, 
     }
     imx[12] = 0;
 
-    calculateDFT(rex, imx, n); //calculate frequency response of actual system; rex- impulse response; imx  = 0, 0, 0, ...
+    calculateDFT(rex, imx, n); //calculate frequency response of actual system; rex- impulse response;in imx  = 0, 0, 0, ...
 
     //calculate the mean squared error between the actual system freq response and
     //the desired frequency response
@@ -124,9 +126,10 @@ double freqDomainError(double *a, double *b, double *t, double *magDFT, int np, 
     FILE *fileOutDFT=fopen("DFT_out.txt", "w");
     for(int i=0; i<n/2; i++)
     {
-        magDFT[i] = sqrt(rex[i]*rex[i]+imx[i]*imx[i]);
-        fprintf(fileOutDFT, "%f ", magDFT[i]);
-        er = er + (magDFT[i]-t[i])*(magDFT[i]-t[i]);
+        mag = sqrt(rex[i]*rex[i]+imx[i]*imx[i]);
+        magDFT[i] = mag;
+        fprintf(fileOutDFT, "%f ", mag);
+        er = er + (mag-t[i])*(mag-t[i]);
     }
     fclose(fileOutDFT);
     er = sqrt(er/(n/2.+1.));
@@ -164,4 +167,5 @@ void calcNewCoef(double *a, double *b, double *t, double *magDFT, double delta, 
         b[i] = b[i] - sb[i] * mu;
     }
     *enew = freqDomainError(a, b, t, magDFT, np, n);
+    qDebug()<<"enew = "<<*enew;
 }
