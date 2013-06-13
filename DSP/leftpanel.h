@@ -26,7 +26,7 @@ Q_SIGNALS:
     void plotIdealFilter(const double *rasp);
     void plotRealFilter(const double *rasp);
     void openedWAVFile(const QString & );
-    void showCoefficients(const double* a, const double* b, const int& np);
+    void showTimeSpentAndCoefficients(const double &time_spent ,const double* a, const double* b, const int& np);
 
 private Q_SLOTS:
     void editedParameters();

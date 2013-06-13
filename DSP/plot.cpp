@@ -10,28 +10,14 @@
 #include "plot.h"
 #include "QGridLayout"
 
-static void logSpace( double *array, int size, double xmin, double xmax )
-{
-    if ( ( xmin <= 0.0 ) || ( xmax <= 0.0 ) || ( size <= 0 ) )
-        return;
-
-    const int imax = size - 1;
-
-    array[0] = xmin;
-    array[imax] = xmax;
-
-    const double lxmin = log( xmin );
-    const double lxmax = log( xmax );
-    const double lstep = ( lxmax - lxmin ) / double( imax );
-
-    for ( int i = 1; i < imax; i++ )
-        array[i] = qExp( lxmin + double( i ) * lstep );
-}
-
 Plot::Plot( QWidget *parent ): QwtPlot( parent )
 {
-    for(int i = 0; i<128; i++)
-        frequency[i] = (double)i;
+    for(int i = 0; i<256; i++)
+    {
+        frequencyFFT[i] = (double)i;
+        if(i<128)
+            frequency[i] = (double)i;
+    }
 
     //logSpace(frequency, 128, 0.01, 128.);
 
@@ -63,10 +49,10 @@ Plot::Plot( QWidget *parent ): QwtPlot( parent )
 
     setAxisMaxMajor( QwtPlot::xBottom, 6 );
     setAxisMaxMinor( QwtPlot::xBottom, 9 );
-    setAxisScale(QwtPlot::xBottom, 0, 128);
+    setAxisScale(QwtPlot::xBottom, 0, 255);
     //setAxisScaleEngine( QwtPlot::xBottom, new QwtLogScaleEngine );
 
-    // curves
+    //curves
     d_curve1 = new QwtPlotCurve( "Caracteristica ideala" );
     d_curve1->setRenderHint( QwtPlotItem::RenderAntialiased );
     d_curve1->setPen( Qt::green );
@@ -83,29 +69,6 @@ Plot::Plot( QWidget *parent ): QwtPlot( parent )
     setAutoReplot( true );
 }
 
-//
-//  Set a plain canvas frame and align the scales to it
-//
-/*void Plot::alignScales()
-{
-    // The code below shows how to align the scales to
-    // the canvas frame, but is also a good example demonstrating
-    // why the spreaded API needs polishing.
-
-    for ( int i = 0; i < QwtPlot::axisCnt; i++ )
-    {
-        QwtScaleWidget *scaleWidget = axisWidget( i );
-        if ( scaleWidget )
-            scaleWidget->setMargin( 0 );
-
-        QwtScaleDraw *scaleDraw = axisScaleDraw( i );
-        if ( scaleDraw )
-            scaleDraw->enableComponent( QwtAbstractScaleDraw::Backbone, false );
-    }
-
-    plotLayout()->setAlignCanvasToScales( true );
-}*/
-
 void Plot::plotIdealFilter(const double* rasp )
 {
     d_curve1->setSamples(frequency, rasp, 128);
@@ -115,7 +78,7 @@ void Plot::plotIdealFilter(const double* rasp )
 
 void Plot::plotRealFilter(const double *rasp)
 {
-    d_curve2->setSamples(frequency, rasp, 128);
+    d_curve2->setSamples(frequencyFFT, rasp, 255);
     d_curve1->plot();
     replot();
 }

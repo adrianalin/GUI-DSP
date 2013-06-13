@@ -42,7 +42,7 @@ QWidget* RightPannel::createCoefficientsTab(QWidget *parent)
     TextEditCoeficientiA->setReadOnly(true);
     TextEditCoeficientiB->setReadOnly(true);
 
-    MainLayout->addWidget(new QLabel("Formula de calcul: y[n] = a[0]*x[n] + a1*x[n-1] + a2*x[n-2] + ... + b1*y[n-1] + b2*y[n-2] + b3*y[n-3] + ..."), 0, 1);
+    MainLayout->addWidget(new QLabel("y[n] = a[0]*x[n] + a1*x[n-1] + a2*x[n-2] + ... + b1*y[n-1] + b2*y[n-2] + b3*y[n-3] + ..."), 0, 1);
     MainLayout->addWidget(new QLabel("Coeficienti a:"), 1, 0);
     MainLayout->addWidget(TextEditCoeficientiA, 1, 1);
     MainLayout->addWidget(new QLabel("Coeficienti b:"), 2, 0);
@@ -84,13 +84,20 @@ QWidget* RightPannel::createProcTab(QWidget *parent)
     progressCPUUsage->setMaximum(100);
     progressCPUUsage->setOrientation(Qt::Vertical);
 
+    TimeSpentComputingCoeff = new QLineEdit("0");
+
     QWidget *page = new QWidget( parent );
     QGridLayout *MainLayout = new QGridLayout;
     QSpacerItem *spacer1 = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
-    MainLayout->addWidget(new QLabel("CPU"), 0, 0);
-    MainLayout->addWidget(progressCPUUsage, 1, 0);
-    MainLayout->addItem(spacer1, 2,0);
+    MainLayout->addWidget(new QLabel("Timpul de calcul al coeficientilor [s]:"), 0 ,0);
+    MainLayout->addWidget(TimeSpentComputingCoeff, 0, 1);
+
+    MainLayout->addItem(spacer1, 1,0);
+
+    MainLayout->addWidget(new QLabel("CPU"), 3, 0);
+    MainLayout->addWidget(progressCPUUsage, 2, 0);
+
     page->setLayout(MainLayout);
 
     return page;
@@ -106,7 +113,7 @@ void RightPannel::plotRealFilter(const double *rasp)
     idealPlot->plotRealFilter(rasp);
 }
 
-void RightPannel::displayCoefficients(const double *a, const double *b, const int &np)
+void RightPannel::displayCoefficients(const double& time_spent ,const double *a, const double *b, const int &np)
 {
     QString str;
     for(int i=0; i<np; i++)
@@ -118,6 +125,8 @@ void RightPannel::displayCoefficients(const double *a, const double *b, const in
         str = str.append(QString("b[%1] = %2\n").arg(i).arg(b[i]));
     TextEditCoeficientiB->setText(str);
     str.clear();
+
+    TimeSpentComputingCoeff->setText(QString::number(time_spent));
 }
 
 void RightPannel::displayWavHeader(const QString &filePath)
@@ -210,11 +219,10 @@ void RightPannel::getCPULoad()
         return ;
     }
 
-    fscanf(pFile, "%s", s);
+    fscanf(pFile, "%s", s); //CPU string
 
     if(indicator == 0)
     {
-
         for(int i=0; i<7; i++) //suma primelor 7 valori //momentul t1
         {
             fscanf(pFile, "%d", &val);
@@ -223,7 +231,6 @@ void RightPannel::getCPULoad()
                 workJiffies1 += val;
         }
         indicator = 1;
-
     }
     else
     {

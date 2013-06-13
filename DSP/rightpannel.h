@@ -16,7 +16,7 @@ public Q_SLOTS:
     void plotIdealFilter(const double *rasp);
     void plotRealFilter(const double *rasp);
     void displayWavHeader(const QString &filePath);
-    void displayCoefficients(const double *a, const double *b, const int& np);
+    void displayCoefficients(const double & time_spent ,const double *a, const double *b, const int& np);
 
 private:
     QTextEdit *TextEditCoeficientiA;
@@ -24,6 +24,8 @@ private:
     QTextEdit *TextEditRiffChunk;
     QTextEdit *TextEditFmtChunk;
     QTextEdit *TextEditDataChunk;
+
+    QLineEdit *TimeSpentComputingCoeff;
 
     QProgressBar* progressCPUUsage;
 

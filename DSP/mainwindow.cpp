@@ -3,7 +3,6 @@
 #include <qlayout.h>
 #include <qevent.h>
 #include <qdatetime.h>
-#include <qwt_plot_canvas.h>
 #include "leftpanel.h"
 #include "plot.h"
 #include "mainwindow.h"
@@ -31,7 +30,7 @@ MainWindow::MainWindow( QWidget *parent ): QMainWindow( parent )
     MainLayout->addWidget( output_pannel, 0, 1);
     setCentralWidget( w );
 
-    connect(input_pannel, SIGNAL(showCoefficients(const double*,const double*,int)), output_pannel, SLOT(displayCoefficients(const double*,const double*,int)));
+    connect(input_pannel, SIGNAL(showTimeSpentAndCoefficients(const double& ,const double*,const double*,int)), output_pannel, SLOT(displayCoefficients(const double& ,const double*,const double*,int)));
 
     connect(input_pannel, SIGNAL(plotIdealFilter(const double*)), output_pannel, SLOT(plotIdealFilter(const double*)));
     connect(input_pannel, SIGNAL(plotRealFilter(const double*)), output_pannel, SLOT(plotRealFilter(const double*)));

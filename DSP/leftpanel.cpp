@@ -4,7 +4,6 @@
 #include <qspinbox.h>
 #include <qcheckbox.h>
 #include <qlayout.h>
-#include <qwt_plot_curve.h>
 #include <qdebug.h>
 #include <QRadioButton>
 #include <QGridLayout>
@@ -14,6 +13,7 @@
 #include "qmainwindow.h"
 #include "coefab.h"
 #include <QApplication>
+#include <time.h>
 
 LeftPanel::LeftPanel( QWidget *parent ): QTabWidget( parent )
 {
@@ -115,9 +115,6 @@ QWidget *LeftPanel::createFilterTab( QWidget *parent )
     QGridLayout *FilterType = new QGridLayout();
     FilterType->addWidget(new QLabel("Tipul filtrului", 0, 0));
     FilterType->addWidget(ComboFilterType, 0, 1);
-    FilterType->addWidget(ButtonStartProcessing, 0,2);
-    FilterType->addWidget(ButtonStopProcessing, 0, 3);
-
     MainLayout->addLayout(FilterType, 8, 0);
 
     //++++++++++++++++calculeaza coeficienti++++++++++
@@ -127,7 +124,14 @@ QWidget *LeftPanel::createFilterTab( QWidget *parent )
 
     MainLayout->addLayout(calcCoef, 9, 0);
 
-    MainLayout->addItem(spacer1, 10, 0);
+    //+++++++++++++++++butoanele starts si stop++++++++
+    QGridLayout *startStop = new QGridLayout();
+    startStop->addWidget(ButtonStartProcessing, 0,2);
+    startStop->addWidget(ButtonStopProcessing, 0, 3);
+
+    MainLayout->addLayout(startStop, 10, 0);
+
+    //MainLayout->addItem(spacer1, 11, 0);
 
     page->setLayout(MainLayout);
 
@@ -202,14 +206,19 @@ void LeftPanel::editedParameters()
 
 void LeftPanel::calculateCoefficients()
 {
+    clock_t start, stop;         //masor timpul necesar pentru calculul coeficientilor filtrului
+    double exec_time;            //http://stackoverflow.com/questions/5248915/execution-time-of-c-program
+
+    start = clock();
+
     ButtonCalculateCoefficients->setEnabled(false);
 
-    int n = 256;
-    FILE *fileCoeff=fopen("out_coef.txt", "w");
+    int n = 256;                                //algoritmul foloseşte FFT de lungime 256
+    FILE *fileCoeff=fopen("out_coef.txt", "w"); //scriu rezultatele in fisiere text, pentru a le putea interpreta in matlab
     FILE *fileInDFT=fopen("DFT_in.txt", "w");
-    double delta = .00001;    //perturbation increment
-    double mu = .2;           //iteration step size
-    double magDFT[128];
+    double delta = .00001;                      //perturbation increment
+    double mu = .2;                             //iteration step size
+    double magDFT[256];                         //este reprezentat grafic
     double enew, eold;
     int np = LinEditNumberOfPoles->text().toInt();  //numarul de poli = max 14
 
@@ -217,7 +226,7 @@ void LeftPanel::calculateCoefficients()
         fprintf(fileInDFT, "%f ", idealFreq[i]);
     fclose(fileInDFT);
 
-    for(int i=0; i<np; i++)//set coefficients to initial value
+    for(int i=0; i<np; i++)                        //setez coeficientii la valoarea initiala- sistemul identitate
     {
         acoef[i] = 0;
         bcoef[i] = 0;
@@ -231,7 +240,7 @@ void LeftPanel::calculateCoefficients()
         qApp->processEvents();
         Q_EMIT plotRealFilter(magDFT);
         if(enew>eold)
-            mu = mu/2;   //adjust iteration step size
+            mu = mu/2;                             //adjust iteration step size
     }
     progressBar->setValue(0);
 
@@ -250,8 +259,11 @@ void LeftPanel::calculateCoefficients()
     }
     fclose(fileCoeff);
 
+    stop = clock();
+    exec_time = (double)(stop - start) / CLOCKS_PER_SEC; //calculez timpul necesar pentru calculul coeficientilor
+
     ButtonCalculateCoefficients->setEnabled(true);
-    Q_EMIT showCoefficients(acoef, bcoef, np);
+    Q_EMIT showTimeSpentAndCoefficients(exec_time ,acoef, bcoef, np);
 }
 
 void LeftPanel::OpenFileSlot()

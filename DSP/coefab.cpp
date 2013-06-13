@@ -1,6 +1,10 @@
 #include "coefab.h"
+#include<fftw3.h>
 #include<QDebug>
 
+/*
+ *algoritm ineficient
+ */
 void calculateDFT(double *rex, double *imx, int n)
 {
     double sr, si;
@@ -30,80 +34,13 @@ void calculateDFT(double *rex, double *imx, int n)
     }
 }
 
-/*void calculateFFT(double *rex, double *imx, int n) //subroutine 1000
-{
-    int nm1, nd2, m, j, k, le, le2, ur, ui, jm1, ip;
-    double tr, ti, sr, si;
-
-    nm1 = n-1;
-    nd2 = n/2;
-    m = (log((double)n)/log(2.));
-
-    j = nd2;
-
-    for(int i = 1; i<n-2; i++)
-    {
-        if(i>j)
-            goto line1190;
-        else
-        {
-            tr = rex[j];
-            ti = imx[j];
-            rex[j] = rex[i];
-            imx[j] = imx[i];
-            rex[i] = tr;
-            imx[i] = ti;
-        }
-        line1190:
-        k=nd2;
-        line1200:
-        if(k>j)
-            goto line1240;
-        else
-        {
-            j=j-k;
-            k=k/2;
-            goto line1200;
-        }
-        line1240:
-        j=j+k;
-    }
-
-    for(int l=1; l<m; l++)
-    {
-        le=pow(2,l);
-        le2=le/2;
-        ur=1;
-        ui=0;
-        sr=cos(PI/(double)le2);
-        si=-sin(PI/(double)le2);
-        for(j=1; j<le2; j++)
-        {
-            jm1=j-1;
-            for(int i=jm1; i<nm1; i++)
-            {
-                ip=i+le2;
-                tr=rex[ip]*ur-imx[ip]*ui;
-                ti=rex[ip]*ui+imx[ip]*ur;
-                rex[ip]=rex[i]-tr;
-                imx[ip]=imx[i]-ti;
-                rex[i]=rex[i]+tr;
-                imx[i]=imx[i]+ti;
-            }
-            tr=ur;
-            ur=tr*sr-ui*si;
-            ui=tr*si+ui*sr;
-        }
-    }
-}*/
-
 double freqDomainError(double *a, double *b, double *t, double *magDFT, int np, int n)//subroutine 3000
 {
     double rex[255];    //real part of signal during FFT
     double imx[255];   //imaginary part of signal during FFT
 
-    double er;
-    double mag;
+    double er=0;
+    double mag=0;
     for(int i=0; i<n-1; i++)  //load shifted impulse into imx[]
     {
         rex[i] = 0;
@@ -124,13 +61,17 @@ double freqDomainError(double *a, double *b, double *t, double *magDFT, int np, 
     //the desired frequency response
     er = 0;
     FILE *fileOutDFT=fopen("DFT_out.txt", "w");
-    for(int i=0; i<n/2; i++)
+    for(int i=0; i<n-1; i++)
     {
         mag = sqrt(rex[i]*rex[i]+imx[i]*imx[i]);
         magDFT[i] = mag;
-        fprintf(fileOutDFT, "%f ", mag);
-        er = er + (mag-t[i])*(mag-t[i]);
+        if(i<n/2)
+        {
+            fprintf(fileOutDFT, "%f ", mag);
+            er = er + (mag-t[i])*(mag-t[i]);
+        }
     }
+
     fclose(fileOutDFT);
     er = sqrt(er/(n/2.+1.));
 
@@ -139,9 +80,15 @@ double freqDomainError(double *a, double *b, double *t, double *magDFT, int np, 
 
 void calcNewCoef(double *a, double *b, double *t, double *magDFT, double delta, double mu, double *enew, double *eold, int np, int n)//subroutine 2000
 {
-    double er;
+    double er=0;
 
     double sa[np], sb[np];
+
+    for(int i=0; i<np; i++)
+    {
+        sa[i] = 0;
+        sb[i] = 0;
+    }
 
     *eold = freqDomainError(a, b, t, magDFT, np, n);
 

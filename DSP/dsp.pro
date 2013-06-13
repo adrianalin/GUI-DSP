@@ -12,7 +12,9 @@ INCLUDEPATH += /usr/local/qwt-6.1.0-rc3/include \
                /home/adrian/Downloads/tinyalsa/include
 
 LIBS += -L/usr/local/qwt-6.1.0-rc3/lib/ -lqwt \
-        -L/home/adrian/Downloads/tinyalsa -ltinyalsa
+        -L/home/adrian/Downloads/tinyalsa -ltinyalsa \
+        -L/usr/local/lib -lfftw3 \
+        -lm
 
 TARGET       = DSP
 

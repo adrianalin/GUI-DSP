@@ -21,6 +21,7 @@ public Q_SLOTS:
 
 private:
     double frequency[128];
+    double frequencyFFT[256];
     QwtPlotGrid *d_grid;
     QwtPlotCurve *d_curve1;
     QwtPlotCurve *d_curve2;
