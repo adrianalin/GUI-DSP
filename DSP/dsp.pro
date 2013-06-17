@@ -9,7 +9,8 @@
 
 INCLUDEPATH += /usr/local/qwt-6.1.0-rc3/include \
                /usr/include/qt4/Qt              \
-               /home/adrian/Downloads/tinyalsa/include
+               /home/adrian/Downloads/tinyalsa/include   \
+               /home/adrian/Downloads/kiss_fft130
 
 LIBS += -L/usr/local/qwt-6.1.0-rc3/lib/ -lqwt \
         -L/home/adrian/Downloads/tinyalsa -ltinyalsa \
@@ -26,7 +27,8 @@ HEADERS = \
     leftpanel.h \
     wavframes.h \
     coefab.h \
-    processingthread.h
+    processingthread.h \
+    kiss_fft.h
 
 SOURCES = \
     plot.cpp \
@@ -35,5 +37,6 @@ SOURCES = \
     rightpannel.cpp \
     leftpanel.cpp \
     coefab.cpp \
-    processingthread.cpp
+    processingthread.cpp \
+    kiss_fft.c
 

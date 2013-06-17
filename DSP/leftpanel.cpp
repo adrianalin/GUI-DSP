@@ -51,7 +51,6 @@ QWidget *LeftPanel::createFilterTab( QWidget *parent )
 {
     QWidget *page = new QWidget( parent );
     QGridLayout *MainLayout = new QGridLayout( page );
-    QSpacerItem *spacer1 = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
     sliderCutoffFreq = new QwtSlider(Qt::Horizontal);
     sliderCutoffFreq->setGroove(true);
@@ -233,7 +232,7 @@ void LeftPanel::calculateCoefficients()
     }
     acoef[0] = 1;
 
-    for(int i=1; i<100; i++)
+    for(int i=1; i<90; i++)
     {
         progressBar->setValue(i);
         calcNewCoef(acoef, bcoef, idealFreq, magDFT, delta, mu, &enew, &eold, np, n);
@@ -248,13 +247,11 @@ void LeftPanel::calculateCoefficients()
     qDebug()<<"\n";
     for(int i = 0; i<np; i++)
     {
-        qDebug()<<"a["<<i<<"]="<<acoef[i];
         fprintf(fileCoeff, "%f ", acoef[i]);
     }
     fprintf(fileCoeff, "\n b: ");
     for(int i = 1; i<np; i++)
     {
-        qDebug()<<"b["<<i<<"]="<<bcoef[i];
         fprintf(fileCoeff, "%f ", bcoef[i]);
     }
     fclose(fileCoeff);
